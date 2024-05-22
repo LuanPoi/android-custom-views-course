@@ -5,19 +5,34 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.util.AttributeSet
+import android.view.MotionEvent
 import com.techyourchance.androidviews.CustomViewScaffold
+import com.techyourchance.androidviews.utils.Point
+import kotlin.math.sqrt
 
 class MySliderView : CustomViewScaffold {
+    companion object {
+        private const val MARGIN_HORIZONTAL_DP = 24f
+        private const val LINE_HEIGHT_DP = 4f
+        private const val CIRCLE_RADIUS_DP = 12f
+    }
+
+    enum class ACTION {
+        DOWN,
+        UP,
+        MOVE,
+        CANCEL
+    }
 
     private val paint: Paint = Paint()
 
-    private var lineStartX = 0f
-    private var lineStartY = 0f
-    private var lineStopX = 0f
-    private var lineStopY = 0f
+    private var lineStartPoint: Point = Point()
+    private var lineStopPoint: Point = Point()
 
-    private var circlePositionX = 0f
-    private var circlePositionY = 0f
+    private var circleCenterPoint: Point = Point()
+
+    private var isBeingDragged: Boolean = false
+    private var previousCircleCenterPoint: Point = Point()
 
     constructor(context: Context?) : super(context)
     constructor(context: Context?, attrs: AttributeSet?) : super(context, attrs)
@@ -29,16 +44,48 @@ class MySliderView : CustomViewScaffold {
         defStyleRes
     )
 
+    private fun pointIsOverThumb(touchPoint: Point, circleCenter: Point, circleRadius: Float): Boolean {
+        val dx = touchPoint.x - circleCenter.x
+        val dy = touchPoint.y - circleCenter.y
+        val distance = sqrt(dx*dx + dy*dy)
+        return if(distance <= circleRadius) true else false
+    }
+
+    override fun onTouchEvent(event: MotionEvent?): Boolean {
+        if(event == null) return super.onTouchEvent(event)
+
+        if(
+            event.action == ACTION.DOWN.ordinal
+            && pointIsOverThumb(Point(event.x, event.y), this.circleCenterPoint, CIRCLE_RADIUS_DP)
+        ){
+            this.isBeingDragged = true
+        } else if(event.action == ACTION.MOVE.ordinal && this.isBeingDragged){
+            if(event.x > this.lineStopPoint.x){
+                this.circleCenterPoint.x = this.lineStopPoint.x
+            } else if (event.x < this.lineStartPoint.x){
+                this.circleCenterPoint.x = this.lineStartPoint.x
+            } else {
+                this.circleCenterPoint.x = event.x
+            }
+
+//            this.circleCenterPoint.y = event.y
+            invalidate()
+        } else {
+            this.isBeingDragged = false
+        }
+        return true
+    }
+
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
         super.onSizeChanged(w, h, oldw, oldh)
 
-        lineStartX = dpToPx(MARGIN_HORIZONTAL_DP)
-        lineStartY = (h / 2f)
-        lineStopX = w - dpToPx(MARGIN_HORIZONTAL_DP)
-        lineStopY = lineStartY
+        this.lineStartPoint.x = dpToPx(MARGIN_HORIZONTAL_DP)
+        this.lineStartPoint.y = (h / 2f)
+        this.lineStopPoint.x = w - dpToPx(MARGIN_HORIZONTAL_DP)
+        this.lineStopPoint.y = this.lineStartPoint.y
 
-        circlePositionY = h / 2f
-        circlePositionX = w / 2f
+        this.circleCenterPoint.y = h / 2f
+        this.circleCenterPoint.x = w / 2f
     }
 
     override fun onDraw(canvas: Canvas) {
@@ -46,23 +93,17 @@ class MySliderView : CustomViewScaffold {
 
         setBackgroundColor(Color.parseColor("#FFD9D9D9"))
 
-        paint.apply {
+        this.paint.apply {
             color = Color.parseColor("#FFB9B9B9")
             strokeWidth = dpToPx(LINE_HEIGHT_DP)
             style = Paint.Style.STROKE
         }
-        canvas.drawLine(lineStartX, lineStartY, lineStopX, lineStopY, this.paint)
+        canvas.drawLine(this.lineStartPoint.x, this.lineStartPoint.y, this.lineStopPoint.x, this.lineStopPoint.y, this.paint)
 
-        paint.apply {
+        this.paint.apply {
             color = Color.parseColor("#FF476fd6")
             style = Paint.Style.FILL
         }
-        canvas.drawCircle(circlePositionX, circlePositionY, dpToPx(CIRCLE_RADIUS_DP), paint)
-    }
-
-    companion object {
-        private const val MARGIN_HORIZONTAL_DP = 24f
-        private const val LINE_HEIGHT_DP = 4f
-        private const val CIRCLE_RADIUS_DP = 12f
+        canvas.drawCircle(this.circleCenterPoint.x, this.circleCenterPoint.y, dpToPx(CIRCLE_RADIUS_DP), this.paint)
     }
 }
