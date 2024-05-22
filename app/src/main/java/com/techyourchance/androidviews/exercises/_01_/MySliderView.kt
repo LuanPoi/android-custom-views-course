@@ -7,22 +7,13 @@ import android.graphics.Paint
 import android.util.AttributeSet
 import android.view.MotionEvent
 import com.techyourchance.androidviews.CustomViewScaffold
+import com.techyourchance.androidviews.exercises._03_.SliderChangeListener
 import com.techyourchance.androidviews.utils.Point
 import kotlin.math.sqrt
 
 class MySliderView : CustomViewScaffold {
-    companion object {
-        private const val MARGIN_HORIZONTAL_DP = 24f
-        private const val LINE_HEIGHT_DP = 4f
-        private const val CIRCLE_RADIUS_DP = 12f
-    }
-
-    enum class ACTION {
-        DOWN,
-        UP,
-        MOVE,
-        CANCEL
-    }
+    var sliderChangeListener: SliderChangeListener? = null
+    var sliderValue: Float = 0f
 
     private val paint: Paint = Paint()
 
@@ -32,7 +23,6 @@ class MySliderView : CustomViewScaffold {
     private var circleCenterPoint: Point = Point()
 
     private var isBeingDragged: Boolean = false
-    private var previousCircleCenterPoint: Point = Point()
 
     constructor(context: Context?) : super(context)
     constructor(context: Context?, attrs: AttributeSet?) : super(context, attrs)
@@ -43,6 +33,13 @@ class MySliderView : CustomViewScaffold {
         defStyleAttr,
         defStyleRes
     )
+
+    private fun calculateSliderValue(start: Point, stop: Point, circle: Point): Float {
+        val sliderRangeValue = stop.x - start.x
+        val thumbValue = circle.x - start.x
+        val result = thumbValue / sliderRangeValue
+        return result
+    }
 
     private fun pointIsOverThumb(touchPoint: Point, circleCenter: Point, circleRadius: Float): Boolean {
         val dx = touchPoint.x - circleCenter.x
@@ -56,7 +53,7 @@ class MySliderView : CustomViewScaffold {
 
         if(
             event.action == ACTION.DOWN.ordinal
-            && pointIsOverThumb(Point(event.x, event.y), this.circleCenterPoint, CIRCLE_RADIUS_DP)
+            && pointIsOverThumb(Point(event.x, event.y), this.circleCenterPoint, dpToPx(CIRCLE_RADIUS_DP))
         ){
             this.isBeingDragged = true
         } else if(event.action == ACTION.MOVE.ordinal && this.isBeingDragged){
@@ -67,6 +64,9 @@ class MySliderView : CustomViewScaffold {
             } else {
                 this.circleCenterPoint.x = event.x
             }
+
+            this.sliderValue = calculateSliderValue(this.lineStartPoint, this.lineStopPoint, this.circleCenterPoint)
+            this.sliderChangeListener?.onValueChanged(this.sliderValue)
 
 //            this.circleCenterPoint.y = event.y
             invalidate()
@@ -105,5 +105,18 @@ class MySliderView : CustomViewScaffold {
             style = Paint.Style.FILL
         }
         canvas.drawCircle(this.circleCenterPoint.x, this.circleCenterPoint.y, dpToPx(CIRCLE_RADIUS_DP), this.paint)
+    }
+
+    private companion object {
+        private const val MARGIN_HORIZONTAL_DP = 24f
+        private const val LINE_HEIGHT_DP = 4f
+        private const val CIRCLE_RADIUS_DP = 24f
+    }
+
+    private enum class ACTION {
+        DOWN,
+        UP,
+        MOVE,
+        CANCEL
     }
 }
