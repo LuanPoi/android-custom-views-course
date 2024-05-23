@@ -4,16 +4,22 @@ import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
+import android.os.Bundle
+import android.os.Parcel
+import android.os.Parcelable
+import android.os.Parcelable.Creator
 import android.util.AttributeSet
 import android.view.MotionEvent
 import com.techyourchance.androidviews.CustomViewScaffold
 import com.techyourchance.androidviews.exercises._03_.SliderChangeListener
+import com.techyourchance.androidviews.solutions._04_.SolutionExercise4View
 import com.techyourchance.androidviews.utils.Point
 import kotlin.math.sqrt
 
+
 class MySliderView : CustomViewScaffold {
     var sliderChangeListener: SliderChangeListener? = null
-    var sliderValue: Float = 0f
+    var sliderValue: Float = 0.5f
 
     private val paint: Paint = Paint()
 
@@ -33,6 +39,22 @@ class MySliderView : CustomViewScaffold {
         defStyleAttr,
         defStyleRes
     )
+
+    override fun onSaveInstanceState(): Parcelable {
+        val superSavedState = super.onSaveInstanceState()
+        return MySliderView.MySavedState(superSavedState, this.sliderValue)
+    }
+
+    override fun onRestoreInstanceState(state: Parcelable?) {
+        if (state is MySliderView.MySavedState) {
+            super.onRestoreInstanceState(state.superSavedState)
+            this.sliderValue = state.sliderValue
+            this.circleCenterPoint.x = ((this.lineStopPoint.x * this.sliderValue) + this.lineStartPoint.x)
+        } else {
+            super.onRestoreInstanceState(state)
+        }
+
+    }
 
     private fun calculateSliderValue(start: Point, stop: Point, circle: Point): Float {
         val sliderRangeValue = stop.x - start.x
@@ -85,7 +107,7 @@ class MySliderView : CustomViewScaffold {
         this.lineStopPoint.y = this.lineStartPoint.y
 
         this.circleCenterPoint.y = h / 2f
-        this.circleCenterPoint.x = w / 2f
+        this.circleCenterPoint.x = ((this.lineStopPoint.x * this.sliderValue) + this.lineStartPoint.x)
     }
 
     override fun onDraw(canvas: Canvas) {
@@ -118,5 +140,37 @@ class MySliderView : CustomViewScaffold {
         UP,
         MOVE,
         CANCEL
+    }
+
+    private class MySavedState: BaseSavedState {
+
+        val superSavedState: Parcelable?
+        val sliderValue: Float
+
+        constructor(superSavedState: Parcelable?, sliderValue: Float): super(superSavedState) {
+            this.superSavedState = superSavedState
+            this.sliderValue = sliderValue
+        }
+
+        constructor(parcel: Parcel) : super(parcel) {
+            this.superSavedState = parcel.readParcelable(null)
+            this.sliderValue = parcel.readFloat()
+        }
+
+        override fun writeToParcel(out: Parcel, flags: Int) {
+            super.writeToParcel(out, flags)
+            out.writeParcelable(superSavedState, flags)
+            out.writeFloat(sliderValue)
+        }
+
+        companion object CREATOR : Parcelable.Creator<MySavedState> {
+            override fun createFromParcel(parcel: Parcel): MySavedState {
+                return MySavedState(parcel)
+            }
+
+            override fun newArray(size: Int): Array<MySavedState?> {
+                return arrayOfNulls(size)
+            }
+        }
     }
 }
